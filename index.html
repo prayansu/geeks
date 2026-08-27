@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autoplay — never click play again</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F5F0;
+    --panel:#FFFFFF;
+    --panel-2:#EFECE4;
+    --text:#1C1A16;
+    --text-dim:#6B6558;
+    --played:#C7401A;
+    --buffered:#E4E0D6;
+    --amber:#B4680B;
+    --border:#E2DED3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;font-weight:700;letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:var(--amber);}
+
+  /* scrubber - signature element, doubles as scroll progress + nav */
+  .scrubber-wrap{
+    position:sticky;
+    top:0;
+    z-index:100;
+    background:rgba(247,245,240,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    padding:10px 0 0;
+  }
+  .scrubber{
+    position:relative;
+    height:4px;
+    margin:0 24px;
+    background:var(--buffered);
+    border-radius:2px;
+  }
+  .scrubber-played{
+    position:absolute;top:0;left:0;height:100%;
+    width:0%;
+    background:var(--played);
+    border-radius:2px;
+    transition:width 0.1s linear;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 24px;}
+
+  /* hero */
+  .hero{
+    max-width:720px;margin:0 auto;
+    padding:64px 24px 40px;
+  }
+
+  .eyebrow{color:var(--amber);font-size:13px;font-weight:500;margin-bottom:12px;}
+  h1{font-size:32px;line-height:1.2;margin-bottom:28px;}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 20px;
+    border-radius:8px;
+    font-size:14px;font-weight:500;
+    text-decoration:none;
+    border:1px solid var(--border);
+  }
+  .btn-primary{background:var(--amber);color:#FFF9EF;border-color:var(--amber);}
+  .btn-ghost{color:var(--text);}
+
+  section{padding:56px 0;border-top:1px solid var(--border);}
+  section .wrap{max-width:720px;}
+  .section-label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+  h2{font-size:26px;margin-bottom:16px;}
+  p{color:var(--text-dim);font-size:15px;margin-bottom:14px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;}
+  .feature-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;}
+  .feature-card h3{font-size:15px;margin-bottom:6px;color:var(--text);}
+  .feature-card p{font-size:13px;margin-bottom:0;}
+
+  .steps{counter-reset:step;margin-top:24px;}
+  .step{
+    display:flex;gap:16px;
+    padding:16px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .step:last-child{border-bottom:none;}
+  .step-time{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--played);
+    font-size:13px;
+    min-width:52px;
+    padding-top:2px;
+  }
+  .step h3{font-size:15px;color:var(--text);margin-bottom:4px;}
+  .step p{font-size:13px;margin-bottom:0;}
+  .step code{
+    background:var(--panel-2);
+    padding:2px 6px;
+    border-radius:4px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--amber);
+  }
+
+  .warn-card{
+    background:var(--panel);
+    border:1px solid rgba(240,169,58,0.3);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-top:20px;
+  }
+  .warn-card p{margin-bottom:0;font-size:13px;}
+
+  .release-box{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-top:20px;
+  }
+  .release-box .ver{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text);}
+  .release-box .ver span{color:var(--text-dim);display:block;font-size:12px;font-family:'Inter',sans-serif;margin-bottom:4px;}
+
+  footer{padding:32px 0 48px;text-align:center;}
+  footer p{font-size:13px;}
+
+  @media (max-width:640px){
+    h1{font-size:30px;}
+    .feature-grid{grid-template-columns:1fr;}
+    .chapters{padding:0 8px 10px;}
+    .chapter span:not(.dot){display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="scrubber-wrap">
+  <div class="scrubber"><div class="scrubber-played" id="scrubProgress"></div></div>
+</div>
+
+<div class="hero">
+  <div class="eyebrow">Autoplay — install guide</div>
+  <h1>Install the extension</h1>
+
+  <div class="release-box">
+    <div class="ver">
+      <span>Latest release</span>
+      v1.0.0
+    </div>
+    <a href="https://github.com/prayansu/geeks/releases/download/extension/geeks.zip" class="btn btn-primary">Download .zip ↗</a>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-time mono">01</div>
+      <div>
+        <h3>Download and unzip</h3>
+        <p>Download the <code>.zip</code> above and unzip it somewhere you'll remember, like a folder named <code>autoplay-extension</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-time mono">02</div>
+      <div>
+        <h3>Open your extensions page</h3>
+        <p>In Chrome or Edge, go to <code>chrome://extensions</code> (or <code>edge://extensions</code>).</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-time mono">03</div>
+      <div>
+        <h3>Turn on developer mode</h3>
+        <p>Flip the "Developer mode" switch, usually in the top-right corner of that page.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-time mono">04</div>
+      <div>
+        <h3>Load the unpacked folder</h3>
+        <p>Click "Load unpacked" and select the unzipped folder from step 1. The extension appears in your toolbar right away.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn-card">
+    <p>Only install extensions from sources you trust. Since this isn't Web Store–reviewed yet, Chrome will show a standard developer-mode notice on the extensions page — that's normal for any unpacked install.</p>
+  </div>
+</div>
+
+<footer>
+  <p>Source and releases on <a href="https://github.com/prayansu/geeks">GitHub</a>.</p>
+</footer>
+
+<script>
+  const progress = document.getElementById('scrubProgress');
+  function onScroll(){
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+</script>
+
+</body>
+</html>
